@@ -11,6 +11,11 @@ import matplotlib.pyplot as plt
 import win32com.client
 import os
 from docx import Document
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx.enum.text import WD_LINE_SPACING
+from docx.shared import Pt
+from matplotlib import pyplot as plt  
+from docx.shared import Cm
 
 df = pd.DataFrame()
 dfRowNumber = 0
@@ -205,6 +210,13 @@ def updateTree():
             data[i][3] = df.get(updatedHeadings[3]).iloc[i]
             data[i][0] = df.get(updatedHeadings[0]).iloc[i]
 
+def make_rows_bold(*rows):
+    for row in rows:
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.font.bold = True
+
 def createReport(progress_bar, porgress_percentage):
     if column_headers[0] == '':
         return
@@ -217,25 +229,29 @@ def createReport(progress_bar, porgress_percentage):
             
             worksheet = workbook.add_worksheet(str(column_headers[treeSeq[n]]))
 
+            bold_format = workbook.add_format({'bold': True})
+
             worksheet.write(0, 3, column_headers[treeSeq[n]])
             
             for i in range(1, shotNumber + 1):
-                worksheet.write(1, i, "Shot " + str(i))
+                worksheet.write(1, i, "Shot " + str(i), bold_format)
         
-            worksheet.write(1, shotNumber + 1, "Max")
-            worksheet.write(1, shotNumber + 2, "Min")
+            worksheet.write(1, shotNumber + 1, "Max", bold_format)
+            worksheet.write(1, shotNumber + 2, "Min", bold_format)
 
             delta_symbol = u'\u0394'  # This is the unicode for the delta symbol
             worksheet.write(0, 0, delta_symbol)
 
-            worksheet.write(1, shotNumber + 3, delta_symbol + "Prozess")
+            worksheet.write(1, shotNumber + 3, delta_symbol + "Prozess", bold_format)
+
+            worksheet.write(1, 0, "Kav.", bold_format)
         
             for i in range(1, kavNumber + 1):
-                worksheet.write(i + 1, 0, "Kav " + str(i))
+                worksheet.write(i + 1, 0, "Kav " + str(i), bold_format)
 
-            worksheet.write(kavNumber + 2, 0, "Max Kav.")
-            worksheet.write(kavNumber + 3, 0, "Min Kav.")
-            worksheet.write(kavNumber + 4, 0, "Delta Kav.")
+            worksheet.write(kavNumber + 2, 0, "max Kav.", bold_format)
+            worksheet.write(kavNumber + 3, 0, "min Kav.", bold_format)
+            worksheet.write(kavNumber + 4, 0, "Delta Kav.", bold_format)
 
             list_of_numbers = df.get(column_headers[treeSeq[n]])
 
@@ -259,8 +275,6 @@ def createReport(progress_bar, porgress_percentage):
             transposed_matrix = np.around(np.transpose(reshaped_array), 4)
 
             total_delta = max_delta_Kav + max_delta_shot
-
-            bold = workbook.add_format({'bold': True})
 
             for i in range(1, kavNumber + 1):
                 for j in range(1, shotNumber + 2):
@@ -291,8 +305,8 @@ def createReport(progress_bar, porgress_percentage):
             )
             # Merge cells.
             a = ord('A') + shotNumber
-            y = chr(a) + '1'
-            worksheet.merge_range("A1:" + y, "QM1 Gauss = K2002 (MERKMAL)", merge_format)
+            y = chr(a + 3) + '1'
+            worksheet.merge_range("A1:" + y, "QM" + str(column_headers[treeSeq[n]]) + " = K2002 (MERKMAL)", merge_format)
 
             x1 = kavNumber + 3
             y1 = chr(a + 2)
@@ -300,37 +314,48 @@ def createReport(progress_bar, porgress_percentage):
             x2 = kavNumber + 4
             x3 = kavNumber + 5
 
-            worksheet.write(row, col, "Nominal")
+            worksheet.write(row, col, "Nominal", bold_format)
             row += 1
-            worksheet.write(row, col, "USL:")
+            worksheet.write(row, col, "USL:", bold_format)
             row += 1
-            worksheet.write(row, col, "LSL")
+            worksheet.write(row, col, "LSL:", bold_format)
 
             worksheet.merge_range(y1 + str(x1) + ":" + yy1 + str(x1), str(dataOther[treeSeq[n]][0]), merge_format)
             worksheet.merge_range(y1 + str(x2) + ":" + yy1 + str(x2), str(dataOther[treeSeq[n]][1]), merge_format)
             worksheet.merge_range(y1 + str(x3) + ":" + yy1 + str(x3), str(dataOther[treeSeq[n]][2]), merge_format)
 
             row += 2
-            worksheet.write(row, 2, "max Kav.")
-            worksheet.write(row, 3, np.max(max_value_Kav))
-            worksheet.write(row, 4, "Max Prozess")
-            worksheet.write(row, 5, np.max(max_value_shot))
+            # worksheet.write(row, 2, "max Kav.", bold_format)
+
+            worksheet.merge_range("C" + str(row + 1) + ":" + "D" + str(row + 1), "max Kav.", merge_format)
+
+            worksheet.write(row, 4, np.max(max_value_Kav))
+            # worksheet.write(row, 4, "Max Prozess", bold_format)
+            worksheet.merge_range("F" + str(row + 1) + ":" + "G" + str(row + 1), "Max Prozess", merge_format)
+
+            worksheet.write(row, 7, np.max(max_value_shot))
 
             row += 1
-            worksheet.write(row, 2, "min Kav.")
-            worksheet.write(row, 3, np.min(min_value_Kav))
-            worksheet.write(row, 4, "Min Prozess")
-            worksheet.write(row, 5, np.min(min_value_shot))
+            # worksheet.write(row, 2, "min Kav.", bold_format)
+            worksheet.merge_range("C" + str(row + 1) + ":" + "D" + str(row + 1), "min Kav.", merge_format)
+
+            worksheet.write(row, 4, np.min(min_value_Kav))
+            # worksheet.write(row, 4, "Min Prozess", bold_format)
+            worksheet.merge_range("F" + str(row + 1) + ":" + "G" + str(row + 1), "Min Prozess", merge_format)
+
+            worksheet.write(row, 7, np.min(min_value_shot))
 
             row += 1
-            worksheet.write(row, 2, "Max " + delta_symbol + "Kav")
-            worksheet.write(row, 3, max_delta_Kav)
-            worksheet.write(row, 4, "Max" + delta_symbol + "Prozess")
-            worksheet.write(row, 5, max_delta_shot)
+            # worksheet.write(row, 2, "Max " + delta_symbol + "Kav", bold_format)
+            worksheet.merge_range("C" + str(row + 1) + ":" + "D" + str(row + 1), "Max " + delta_symbol + "Kav", merge_format)
+            worksheet.write(row, 4, max_delta_Kav)
+            # worksheet.write(row, 4, "Max" + delta_symbol + "Prozess", bold_format)
+            worksheet.merge_range("F" + str(row + 1) + ":" + "G" + str(row + 1), "Max" + delta_symbol + "Prozess", merge_format)
+            worksheet.write(row, 7, max_delta_shot)
 
             row += 1
-            worksheet.merge_range("C" + str(row + 1) + ":" + "E" + str(row + 1), "Total" + delta_symbol, merge_format)
-            worksheet.write(row, 5, total_delta)
+            worksheet.merge_range("C" + str(row + 1) + ":" + "G" + str(row + 1), "Total" + delta_symbol, merge_format)
+            worksheet.write(row, 7, total_delta)
 
             border_format=workbook.add_format({
                                 'border':1,
@@ -427,46 +452,191 @@ def createReport(progress_bar, porgress_percentage):
             transposed_matrix = np.around(transposed_matrix, 4)
 
             table = document.add_table(rows=kavNumber+5, cols=shotNumber+4)
+            table.style = 'TableGrid'
+
+            for row_height in table.rows:
+                row_height.height = Cm(0.5)
+            # table.style = 'MediumGrid3'
 
             delta_symbol = u'\u0394'
 
-            table.cell(0, 0).text = str(column_headers[treeSeq[n]])
-            table.cell(kavNumber + 2, 0).text = "Max Kav."
-            table.cell(kavNumber + 3, 0).text = "Min Kav."
+            table.cell(0, 0).merge(table.cell(0, shotNumber + 3))
+
+            table.cell(0, 0).text = "QM" + str(str(column_headers[treeSeq[n]]) + " = K2002 (MERKMAL)")
+            cell = table.cell(0, 0)
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                     run.bold = True
+            table.cell(1, 0).text = "Kav."
+            cell = table.cell(1, 0)
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                     run.bold = True
+            table.cell(kavNumber + 2, 0).text = "max Kav."
+            cell = table.cell(kavNumber + 2, 0)
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                     run.bold = True
+            table.cell(kavNumber + 3, 0).text = "min Kav."
+            cell = table.cell(kavNumber + 3, 0)
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                     run.bold = True
             table.cell(kavNumber + 4, 0).text = delta_symbol + "Kav."
+            cell = table.cell(kavNumber + 4, 0)
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                     run.bold = True
 
             row = kavNumber + 2
             col = shotNumber + 1
 
+            table.cell(row, col).merge(table.cell(row, col + 1))
             table.cell(row, col).text = "Nominal"
+            cell = table.cell(row, col)
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                     run.bold = True
             table.cell(row, col + 2).text = str(dataOther[treeSeq[n]][0])
 
             row += 1
+            table.cell(row, col).merge(table.cell(row, col + 1))
             table.cell(row, col).text = "USL:"
+            cell = table.cell(row, col)
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                     run.bold = True
             table.cell(row, col + 2).text = str(dataOther[treeSeq[n]][1])
 
             row += 1
+            table.cell(row, col).merge(table.cell(row, col + 1))
             table.cell(row, col).text = "LSL:"
+            cell = table.cell(row, col)
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                     run.bold = True
             table.cell(row, col + 2).text = str(dataOther[treeSeq[n]][2])
 
             for i in range(2, kavNumber + 2):
-                table.cell(i, 0).text = "Kav. " + str(i - 2)
-                table.cell(i, shotNumber + 1).text = str(max_value_shot[i - 3])
-                table.cell(i, shotNumber + 2).text = str(min_value_shot[i - 3])
-                table.cell(i, shotNumber + 3).text = str(delta_shot[i - 3])
+                table.cell(i, 0).text = "Kav. " + str(i - 1)
+                cell = table.cell(i, 0)
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+                table.cell(i, shotNumber + 1).text = str(max_value_shot[i - 2])
+                table.cell(i, shotNumber + 2).text = str(min_value_shot[i - 2])
+                table.cell(i, shotNumber + 3).text = str(delta_shot[i - 2])
                 for j in range(1, shotNumber + 1):
-                    table.cell(i, j).text = str(transposed_matrix[i - 3][j-1])
+                    table.cell(i, j).text = str(transposed_matrix[i - 2][j-1])
 
             delta_symbol = u'\u0394'
-            table.cell(1, shotNumber + 1).text = "Min"
-            table.cell(1, shotNumber + 2).text = "Max"
-            table.cell(1, shotNumber + 3).text = delta_symbol + " Prozess"
+            table.cell(1, shotNumber + 1).text = "Max"
+            cell = table.cell(1, shotNumber + 1)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            table.cell(1, shotNumber + 2).text = "Min"
+            cell = table.cell(1, shotNumber + 2)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            table.cell(1, shotNumber + 3).text = delta_symbol + "Prozess"
+            cell = table.cell(1, shotNumber + 3)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
 
             for i in range(1, shotNumber + 1):
                 table.cell(1, i).text = "Shot" + str(i)
+                cell = table.cell(1, i)
+                for paragraph in cell.paragraphs:
+                        for run in paragraph.runs:
+                            run.bold = True
                 table.cell(kavNumber + 2, i).text = str(max_value_Kav[i - 1])
                 table.cell(kavNumber + 3, i).text = str(min_value_Kav[i - 1])
                 table.cell(kavNumber + 4, i).text = str(delta_Kav[i - 1])
+
+            for r in table.rows:
+                for c in r.cells:
+                    pp = c.paragraphs
+                    for p in pp:
+                        # Set the line spacing to center the content vertically
+                        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+                        p.paragraph_format.line_spacing = Pt(13)  # Adjust the line spacing value as needed to center the content
+                        p.alignment=WD_PARAGRAPH_ALIGNMENT.CENTER
+                        for ru in p.runs:
+                            font = ru.font
+                            font.size = Pt(6.5)
+            
+            paragraph = document.add_paragraph('  ')
+
+            table_small = document.add_table(rows=4, cols=4)
+
+            table_small.style = 'TableGrid'
+
+            for row_height in table_small.rows:
+                row_height.height = Cm(0.5)
+
+            table_small.cell(0, 0).text = "max Kav."
+            cell = table_small.cell(0, 0)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            table_small.cell(0, 1).text = str(np.max(max_value_Kav))
+            table_small.cell(0, 2).text = "Max Prozess"
+            cell = table_small.cell(0, 2)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            table_small.cell(0, 3).text = str(np.max(max_value_shot))
+
+            table_small.cell(1, 0).text = "min Kav."
+            cell = table_small.cell(1, 0)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            table_small.cell(1, 1).text = str(np.min(min_value_Kav))
+            table_small.cell(1, 2).text = "min Prozess"
+            cell = table_small.cell(1, 2)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            table_small.cell(1, 3).text = str(np.min(min_value_shot))
+
+            delta_symbol = u'\u0394'
+            table_small.cell(2, 0).text = "Max " + delta_symbol + "Kav"
+            cell = table_small.cell(2, 0)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            table_small.cell(2, 1).text = str(max_delta_Kav)
+            table_small.cell(2, 2).text = "Max " + delta_symbol + "Prozess"
+            cell = table_small.cell(2, 2)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            table_small.cell(2, 3).text = str(max_delta_shot)
+
+            table_small.cell(3, 0).merge(table.cell(3, 2))
+            table_small.cell(3, 0).text = "Total" + delta_symbol
+            cell = table_small.cell(3, 0)
+            for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+            table_small.cell(3, 3).text = str(total_delta)
+
+            for r in table_small.rows:
+                for c in r.cells:
+                    pp = c.paragraphs
+                    for p in pp:
+                        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+                        p.paragraph_format.line_spacing = Pt(13)  # Adjust the line spacing value as needed to center the content
+                        p.alignment=WD_PARAGRAPH_ALIGNMENT.CENTER
+                        for ru in p.runs:
+                            font = ru.font
+                            font.size = Pt(6.5)
+
+            # paragraph = document.add_paragraph('  ')
 
             x = np.arange(1, shotNumber + 1)
             t = np.array([i for i in range(1, shotNumber + 1)])
@@ -475,11 +645,16 @@ def createReport(progress_bar, porgress_percentage):
             lsl = np.full(shotNumber, dataOther[treeSeq[n]][2])
             
             fig,ax=plt.subplots()
+            # fig.suptitle('test title', fontsize=20)
+            plt.xlabel('xlabel', fontsize=6.5)
+            plt.ylabel('ylabel', fontsize=6.5)
             for i in range(kavNumber):
                 ax.scatter(
                     x , transposed_matrix[i], label="Kav " + str(i + 1),
                     s=50, color='black', alpha=0.7
                 )
+            for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+                label.set_fontsize(6.5)  # setting the font size for the tick labels
             ax.plot(t, nominal, label = "Nominal", color='black', linestyle='dashed')
             ax.plot(t, usl, label = "USL", color='black', linestyle='solid')
             ax.plot(t, lsl, label = "LSL", color='black', linestyle='solid')
@@ -490,7 +665,8 @@ def createReport(progress_bar, porgress_percentage):
                 loc="upper center",
                 ncol=6,
                 bbox_to_anchor=(0.5, 0.16),
-                bbox_transform=fig.transFigure 
+                bbox_transform=fig.transFigure,
+                fontsize=6.5
             )
 
             imgdata=io.BytesIO()
